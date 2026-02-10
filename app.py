@@ -10,62 +10,11 @@ from io import BytesIO
 # ================= CONFIG INICIAL =================
 st.set_page_config(
     page_title="Brx Consultas Empresariais",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    layout="wide"
 )
 
-# ================= CSS (LOGIN COMPACTO) =================
-st.markdown("""
-<style>
-/* esconde barra superior/rodapé */
-header { visibility: hidden; }
-footer { visibility: hidden; }
-div[data-testid="stToolbar"] { visibility: hidden; height: 0; }
-
-/* centraliza e deixa compacto somente quando estiver no login */
-.login-wrap .block-container {
-  max-width: 460px;
-  padding-top: 1.6rem;
-  padding-bottom: 1.6rem;
-}
-
-/* inputs mais compactos */
-.login-wrap input {
-  height: 38px !important;
-  font-size: 0.92rem !important;
-}
-
-/* botão compacto */
-.login-wrap .stButton > button {
-  height: 40px;
-  border-radius: 10px;
-  font-size: 0.95rem;
-}
-
-/* card do login */
-.login-card{
-  background: rgba(15, 23, 42, .94);
-  border: 1px solid rgba(148, 163, 184, .18);
-  border-radius: 16px;
-  padding: 1.25rem 1.2rem;
-  box-shadow: 0 14px 36px rgba(0,0,0,.45);
-}
-.login-title{
-  text-align:center;
-  font-size:1.15rem;
-  font-weight:700;
-  margin:0;
-}
-.login-sub{
-  text-align:center;
-  font-size:.85rem;
-  color: rgba(203,213,225,.75);
-  margin:.35rem 0 1rem 0;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ================= LOGIN MULTIUSUÁRIO (HASH) =================
+
 def sha256_hex(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
@@ -73,17 +22,26 @@ def check_password(plain: str, hashed_hex: str) -> bool:
     return sha256_hex(plain) == hashed_hex
 
 def login_screen():
-    # wrapper pra aplicar CSS só no login
-    st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="padding: 10px 0 0 0">
+          <h1 style="margin:0">🏢 Brx Consultas Empresariais</h1>
+          <p style="opacity:0.8; margin-top:6px">
+            Automação inteligente para localizar CNPJs a partir de listas de empresas
+          </p>
+        </div>
+        <hr/>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown('<div class="login-card">', unsafe_allow_html=True)
-    st.markdown('<p class="login-title">🔐 Brx Consultas Empresariais</p>', unsafe_allow_html=True)
-    st.markdown('<p class="login-sub">Acesso restrito</p>', unsafe_allow_html=True)
+    st.markdown("### 🔐 Acesso")
+    usuario = st.text_input("Usuário", placeholder="Ex: admin")
+    senha = st.text_input("Senha", type="password", placeholder="Sua senha")
 
-    usuario = st.text_input("Usuário", placeholder="Usuário", label_visibility="collapsed")
-    senha = st.text_input("Senha", type="password", placeholder="Senha", label_visibility="collapsed")
-
-    entrar = st.button("Entrar", use_container_width=True)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        entrar = st.button("Entrar", use_container_width=True)
 
     if entrar:
         try:
@@ -98,9 +56,6 @@ def login_screen():
             st.rerun()
         else:
             st.error("Usuário ou senha inválidos.")
-
-    st.markdown('</div>', unsafe_allow_html=True)  # login-card
-    st.markdown('</div>', unsafe_allow_html=True)  # login-wrap
 
 def require_auth():
     if "auth" not in st.session_state:
@@ -122,6 +77,7 @@ except Exception:
     st.stop()
 
 # ================= FUNÇÕES =================
+
 CNPJ_REGEX = re.compile(r"\b\d{2}\.?\d{3}\.?\d{3}[\/]?\d{4}-?\d{2}\b")
 
 def normalizar_texto(valor):
@@ -335,3 +291,4 @@ if rodar:
     except Exception as e:
         st.error("Ocorreu um erro durante a execução.")
         st.exception(e)
+
