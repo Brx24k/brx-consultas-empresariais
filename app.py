@@ -21,41 +21,63 @@ def sha256_hex(s: str) -> str:
 def check_password(plain: str, hashed_hex: str) -> bool:
     return sha256_hex(plain) == hashed_hex
 
+
 def login_screen():
-    st.markdown(
-        """
-        <div style="padding: 10px 0 0 0">
-          <h1 style="margin:0">🏢 Brx Consultas Empresariais</h1>
-          <p style="opacity:0.8; margin-top:6px">
-            Automação inteligente para localizar CNPJs a partir de listas de empresas
-          </p>
-        </div>
-        <hr/>
-        """,
-        unsafe_allow_html=True
-    )
+    # CSS SÓ PARA O CARD (não mexe no app após login)
+    st.markdown("""
+    <style>
+      .login-card{
+        background: rgba(15, 23, 42, .92);
+        border: 1px solid rgba(148, 163, 184, .18);
+        border-radius: 16px;
+        padding: 18px 18px 12px 18px;
+        box-shadow: 0 14px 36px rgba(0,0,0,.35);
+      }
+      .login-title{
+        text-align:center;
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0;
+      }
+      .login-sub{
+        text-align:center;
+        font-size: .85rem;
+        color: rgba(203,213,225,.75);
+        margin: 6px 0 14px 0;
+      }
+    </style>
+    """, unsafe_allow_html=True)
 
-    st.markdown("### 🔐 Acesso")
-    usuario = st.text_input("Usuário", placeholder="Ex: admin")
-    senha = st.text_input("Senha", type="password", placeholder="Sua senha")
+    # Centraliza o login SEM alterar layout do resto do app
+    st.markdown("<br>", unsafe_allow_html=True)
+    cL, cM, cR = st.columns([1.2, 1.0, 1.2])
 
-    c1, c2 = st.columns([1, 2])
-    with c1:
+    with cM:
+        st.markdown('<div class="login-card">', unsafe_allow_html=True)
+        st.markdown('<p class="login-title">🔐 BRX Consultas</p>', unsafe_allow_html=True)
+        st.markdown('<p class="login-sub">Acesso restrito</p>', unsafe_allow_html=True)
+
+        usuario = st.text_input("Usuário", placeholder="Ex: admin")
+        senha = st.text_input("Senha", type="password", placeholder="Sua senha")
+
         entrar = st.button("Entrar", use_container_width=True)
 
-    if entrar:
-        try:
-            usuarios = st.secrets["USERS"]
-        except Exception:
-            st.error("USERS não configurado nos Secrets.")
-            st.stop()
+        if entrar:
+            try:
+                usuarios = st.secrets["USERS"]
+            except Exception:
+                st.error("USERS não configurado nos Secrets.")
+                st.stop()
 
-        if usuario in usuarios and check_password(senha, usuarios[usuario]):
-            st.session_state["auth"] = True
-            st.session_state["user"] = usuario
-            st.rerun()
-        else:
-            st.error("Usuário ou senha inválidos.")
+            if usuario in usuarios and check_password(senha, usuarios[usuario]):
+                st.session_state["auth"] = True
+                st.session_state["user"] = usuario
+                st.rerun()
+            else:
+                st.error("Usuário ou senha inválidos.")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
 
 def require_auth():
     if "auth" not in st.session_state:
@@ -122,7 +144,7 @@ def processar_planilha(df, uf_padrao, cidade_padrao, sleep_s, sites_alvo, top_n=
     progresso = st.progress(0)
     status_ui = st.empty()
 
-    for idx, row in df.iterrows():
+    for idx, row in df.iterrows():  # <-- LINHA CORRETA (não dá SyntaxError)
         empresa = normalizar_texto(row.get("EMPRESA", ""))
         cidade = normalizar_texto(row.get("CIDADE", "")) or cidade_padrao
         uf_linha = normalizar_texto(row.get("UF", "")) or uf_padrao
@@ -209,7 +231,7 @@ with st.sidebar:
         st.session_state["user"] = ""
         st.rerun()
 
-# Header
+# Header (igual ao seu)
 st.markdown(
     """
     <div style="padding: 8px 0 6px 0">
@@ -224,7 +246,7 @@ st.markdown(
 
 st.write("---")
 
-# Layout em colunas
+# Layout em colunas (igual ao seu)
 left, right = st.columns([1.1, 1.3])
 
 with left:
@@ -291,4 +313,3 @@ if rodar:
     except Exception as e:
         st.error("Ocorreu um erro durante a execução.")
         st.exception(e)
-
