@@ -9,8 +9,9 @@ from io import BytesIO
 
 # ================= CONFIG INICIAL =================
 st.set_page_config(
-    page_title="Brx Consultas Empresariais",
-    layout="wide"
+    page_title="BRX Consultas Empresariais",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 # ================= LOGIN MULTIUSUÁRIO (HASH) =================
@@ -87,70 +88,6 @@ def require_auth():
 
 require_auth()
 
-# ================= TEMA (SÓ APÓS LOGIN) =================
-st.markdown("""
-<style>
-/* Fundo e espaçamento geral */
-.block-container { padding-top: 1.1rem; }
-[data-testid="stAppViewContainer"] {
-  background: radial-gradient(1200px 600px at 20% -10%, rgba(56,189,248,.10), transparent 60%),
-              radial-gradient(1000px 600px at 90% 0%, rgba(34,197,94,.08), transparent 55%),
-              linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(3,7,18,1) 100%);
-}
-
-/* Sidebar com cara de painel */
-section[data-testid="stSidebar"] {
-  background: rgba(2,6,23,.75) !important;
-  border-right: 1px solid rgba(148,163,184,.12) !important;
-}
-section[data-testid="stSidebar"] .block-container { padding-top: 1rem; }
-
-/* Cards */
-.panel {
-  background: rgba(15,23,42,.55);
-  border: 1px solid rgba(148,163,184,.14);
-  border-radius: 16px;
-  padding: 14px 14px 10px 14px;
-  box-shadow: 0 10px 26px rgba(0,0,0,.20);
-}
-.panel h3 { margin-top: 0.25rem; }
-
-/* Barra do topo */
-.topbar {
-  background: rgba(15,23,42,.65);
-  border: 1px solid rgba(148,163,184,.14);
-  border-radius: 18px;
-  padding: 12px 14px;
-  box-shadow: 0 10px 26px rgba(0,0,0,.20);
-  margin-bottom: 12px;
-}
-.top-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  margin: 0;
-}
-.top-sub {
-  font-size: .86rem;
-  opacity: .75;
-  margin: 3px 0 0 0;
-}
-.chip {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(148,163,184,.10);
-  border: 1px solid rgba(148,163,184,.18);
-  font-size: .85rem;
-}
-
-/* Botões um pouco mais “premium” */
-.stButton > button {
-  border-radius: 12px;
-  height: 42px;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ================= API KEY FIXA =================
 try:
     SERPER_KEY = st.secrets["SERPER_KEY"]
@@ -190,6 +127,7 @@ def processar_planilha(df, uf_padrao, cidade_padrao, sleep_s, sites_alvo, top_n=
         df["CIDADE"] = ""
     if "UF" not in df.columns:
         df["UF"] = ""
+
     if "EMPRESA" not in df.columns:
         raise ValueError("A planilha precisa ter a coluna 'EMPRESA'.")
 
@@ -207,7 +145,13 @@ def processar_planilha(df, uf_padrao, cidade_padrao, sleep_s, sites_alvo, top_n=
         status_ui.write(f"[{idx+1}/{total}] {empresa or '—'} | {cidade or '—'} | {uf_linha or '—'}")
 
         if not empresa:
-            saida.append({"EMPRESA": "", "CIDADE": cidade, "UF": uf_linha, "CNPJ_ENCONTRADO": "", "STATUS": "SEM EMPRESA"})
+            saida.append({
+                "EMPRESA": "",
+                "CIDADE": cidade,
+                "UF": uf_linha,
+                "CNPJ_ENCONTRADO": "",
+                "STATUS": "SEM EMPRESA"
+            })
             progresso.progress(int((idx + 1) / total * 100))
             continue
 
@@ -235,7 +179,14 @@ def processar_planilha(df, uf_padrao, cidade_padrao, sleep_s, sites_alvo, top_n=
             except Exception:
                 continue
 
-        saida.append({"EMPRESA": empresa, "CIDADE": cidade, "UF": uf_linha, "CNPJ_ENCONTRADO": cnpj, "STATUS": status})
+        saida.append({
+            "EMPRESA": empresa,
+            "CIDADE": cidade,
+            "UF": uf_linha,
+            "CNPJ_ENCONTRADO": cnpj,
+            "STATUS": status
+        })
+
         time.sleep(float(sleep_s))
         progresso.progress(int((idx + 1) / total * 100))
 
@@ -248,68 +199,74 @@ def df_para_excel_bytes(df_saida):
     buffer.seek(0)
     return buffer
 
-# ================= SIDEBAR (MESMA LÓGICA, VISUAL MAIS LIMPO) =================
-with st.sidebar:
-    st.markdown("## ⚙️ Configurações")
-    st.caption(f"Usuário: **{st.session_state['user']}**")
+# ================= UI CLEAN (TOPO HORIZONTAL) =================
+st.markdown("""
+<style>
+/* Barra superior clean */
+.topbar {
+  padding: 10px 0 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  margin-bottom: 14px;
+}
+.small-btn button{
+  height: 32px !important;
+  padding: 0 14px !important;
+  font-size: 0.85rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
-    uf_padrao = st.text_input("UF padrão", value="MS")
-    cidade_padrao = st.text_input("Cidade padrão (opcional)", value="")
-    sleep_s = st.slider("Delay entre buscas (segundos)", 0.0, 2.0, 0.4, 0.1)
-
-    st.markdown("---")
-    st.markdown("### 🔎 Buscas")
-    top_n = st.slider("TOP N por site", 1, 10, 2)
-
-    sites_default = ["econodata.com.br", "cnpj.biz", "solutudo.com.br", "cnpja.com"]
-    sites_txt = st.text_area("Sites (um por linha)", value="\n".join(sites_default), height=140)
-    sites_alvo = [s.strip() for s in sites_txt.splitlines() if s.strip()]
-
-# ================= TOPO (novo) =================
-topL, topR = st.columns([6, 2], vertical_alignment="center")
-with topL:
-    st.markdown("""
-    <div class="topbar">
-      <p class="top-title">🏢 BRX Consultas Empresariais</p>
-      <p class="top-sub">Localize CNPJs a partir de listas de empresas (Serper)</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with topR:
-    st.markdown(f'<span class="chip">👤 {st.session_state["user"]}</span>', unsafe_allow_html=True)
+# Linha 1: Nome (esq) + Sair (dir)
+t1, t2 = st.columns([6, 1.4], vertical_alignment="center")
+with t1:
+    st.markdown("### 🏢 BRX Consultas Empresariais")
+    st.caption("Localize CNPJs a partir de listas de empresas (Serper)")
+with t2:
+    st.markdown('<div class="small-btn">', unsafe_allow_html=True)
     if st.button("Sair", use_container_width=True):
         st.session_state["auth"] = False
         st.session_state["user"] = ""
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= ÁREA PRINCIPAL (cards) =================
-left, right = st.columns([1.05, 1.35], gap="large")
+# Linha 2: Configs em linha
+c1, c2, c3, c4, c5 = st.columns([1, 1.8, 1.3, 1.0, 3.2], vertical_alignment="bottom")
+uf_padrao = c1.text_input("UF", value="MS")
+cidade_padrao = c2.text_input("Cidade", value="")
+sleep_s = c3.slider("Delay", 0.0, 2.0, 0.4, 0.1)
+top_n = c4.slider("TOP N", 1, 10, 2)
+sites_txt = c5.text_input("Sites (separados por vírgula)",
+                          value="econodata.com.br, cnpj.biz, solutudo.com.br, cnpja.com")
+
+sites_alvo = [s.strip() for s in sites_txt.split(",") if s.strip()]
+
+st.markdown("---")
+
+# ================= APP PRINCIPAL (IGUAL) =================
+left, right = st.columns([1.1, 1.3])
 
 with left:
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
     st.markdown("### 📥 Entrada")
     st.caption("Envie uma planilha Excel com a coluna **EMPRESA**. As colunas **CIDADE** e **UF** são opcionais.")
     arquivo = st.file_uploader("Upload do Excel (.xlsx)", type=["xlsx"])
+
     st.markdown("### ▶️ Execução")
     rodar = st.button("Rodar busca", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 with right:
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
     st.markdown("### 📊 Resultado")
-    k1, k2, k3 = st.columns(3)
-    k1.metric("Empresas", "—")
-    k2.metric("Encontrados", "—")
-    k3.metric("Não encontrados", "—")
-    info_res = st.empty()
-    st.markdown('</div>', unsafe_allow_html=True)
+    kpi1, kpi2, kpi3 = st.columns(3)
+    kpi1.metric("Empresas", "—")
+    kpi2.metric("Encontrados", "—")
+    kpi3.metric("Não encontrados", "—")
+    _ = st.empty()
 
 if rodar:
     try:
         if arquivo is None:
             st.error("Envie um arquivo Excel (.xlsx).")
         elif not sites_alvo:
-            st.error("Informe pelo menos 1 site na sidebar.")
+            st.error("Informe pelo menos 1 site.")
         else:
             df = pd.read_excel(arquivo)
 
@@ -329,13 +286,11 @@ if rodar:
             nao_encontrados = int((df_saida["STATUS"] == "NÃO ENCONTRADO").sum())
 
             with right:
-                st.markdown('<div class="panel">', unsafe_allow_html=True)
                 st.markdown("### 📊 Resultado")
-
-                k1, k2, k3 = st.columns(3)
-                k1.metric("Empresas", total_empresas)
-                k2.metric("Encontrados", encontrados)
-                k3.metric("Não encontrados", nao_encontrados)
+                kpi1, kpi2, kpi3 = st.columns(3)
+                kpi1.metric("Empresas", total_empresas)
+                kpi2.metric("Encontrados", encontrados)
+                kpi3.metric("Não encontrados", nao_encontrados)
 
                 st.caption(f"Tempo: {duracao:.1f}s | Sites: {len(sites_alvo)} | TOP N: {int(top_n)}")
                 st.success("Busca finalizada com sucesso!")
@@ -350,8 +305,6 @@ if rodar:
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
-                st.markdown('</div>', unsafe_allow_html=True)
-
     except Exception as e:
         st.error("Ocorreu um erro durante a execução.")
         st.exception(e)
