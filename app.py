@@ -60,14 +60,50 @@ def require_auth():
 
 require_auth()
 
-# ================= API =================
-SERPER_KEY = st.secrets["SERPER_KEY"]
+# ================= API KEY (POR USUÁRIO) =================
+# Salva em sessão (não precisa redigitar enquanto o usuário estiver logado)
+if "SERPER_KEY_USER" not in st.session_state:
+    st.session_state.SERPER_KEY_USER = ""
 
+st.markdown("""
+<style>
+.api-card{
+    background: rgba(15,23,42,.35);
+    border: 1px solid rgba(148,163,184,.18);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 8px;
+}
+.api-card small{ color: rgba(226,232,240,.75); }
+</style>
+""", unsafe_allow_html=True)
+
+with st.container():
+    st.markdown('<div class="api-card">', unsafe_allow_html=True)
+    st.markdown("**🔑 API Key do usuário (Serper)**")
+    st.session_state.SERPER_KEY_USER = st.text_input(
+        "Cole sua API Key aqui",
+        value=st.session_state.SERPER_KEY_USER,
+        type="password",
+        label_visibility="collapsed",
+        placeholder="Ex: xxxxxxxx..."
+    )
+    st.markdown("<small>Essa chave fica só nesta sessão (ao sair, você decide se quer apagar ou não).</small>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+SERPER_KEY = (st.session_state.SERPER_KEY_USER or "").strip()
+if not SERPER_KEY:
+    st.warning("Informe a API Key para usar a busca.")
+    st.stop()
+
+# ================= FUNÇÕES =================
 CNPJ_REGEX = re.compile(r"\b\d{2}\.?\d{3}\.?\d{3}[\/]?\d{4}-?\d{2}\b")
 
 def normalizar(v):
-    if v is None: return ""
-    if isinstance(v, float) and math.isnan(v): return ""
+    if v is None: 
+        return ""
+    if isinstance(v, float) and math.isnan(v): 
+        return ""
     return str(v).strip()
 
 def extrair_cnpj(txt):
@@ -153,6 +189,8 @@ with t2:
     if st.button("Sair"):
         st.session_state.auth = False
         st.session_state.user = ""
+        # opcional: limpar a chave ao sair
+        st.session_state.SERPER_KEY_USER = ""
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
